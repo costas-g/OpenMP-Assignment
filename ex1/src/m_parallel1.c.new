@@ -1,0 +1,70 @@
+// #define _POSIX_C_SOURCE 200809L
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <omp.h>
+
+size_t n_global, m_global;
+size_t num_threads_global;
+const long long *A_g, *B_g;
+long long *R_g;
+
+void *routine(){
+    int rank = omp_get_thread_num();
+    //or i could use : 
+    //int thread_count = omp_get_num_threads;
+    const size_t n_start = (n_global + 1) * rank / num_threads_global; // we need it for the for loop for i = (rank*n_global)/ num_threads_global to i = (rank*n_global+1)/ num_threads_global
+    const size_t n_end = (n_global + 1) * (rank + 1) / num_threads_global;
+
+    for (size_t i = n_start; i < n_end; i++){
+        for(size_t j=0; j < m_global + 1; j++){
+           long long prod = A_g[i] * B_g[j];
+
+            # pragma omp atomic 
+            R_g[i+j] += prod;
+        }
+    }
+
+    return NULL;
+}
+
+
+long long  *m_parallel(const long long *A, size_t n, const long long *B, size_t m, size_t num_threads, double *time){
+
+    // Initialization and declaration 
+    struct timespec begin, end;
+    size_t r = n + m + 1;
+    int thread_count = num_threads;
+    num_threads_global = num_threads;
+    n_global = n;
+    m_global = m;
+    A_g = A;
+    B_g = B;
+
+    long long *R = calloc(r, sizeof(long long)); 
+    if (!R) {
+        perror("calloc R");
+        return NULL;
+    }
+    
+    R_g = R;
+
+    
+    clock_gettime(CLOCK_MONOTONIC, &begin);
+
+    
+    # pragma omp parallel num_threads(thread_count)
+        routine();
+    
+    
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    double time_spent = (end.tv_sec - begin.tv_sec) + (end.tv_nsec - begin.tv_nsec) / 1e9;
+    *time = time_spent;
+
+#ifdef DEBUG
+    printf("\n\n");
+#endif
+
+    return R;
+}
