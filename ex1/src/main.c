@@ -3,76 +3,98 @@
 #include <stdlib.h>
 #include <time.h>
 
-
 #include "generate.h"
 #include "m_parallel.h"
 #include "m_serial.h"
 
+void Usage(char* prog_name);
+// long long *generate_random_poly(size_t n, size_t max_coeff);
 
 int  main(int argc, char* argv[]) {
-    if (argc != 3){
-        fprintf(stderr, "Usage: %s <degree> <num_threads>\n", argv[0]);
-        return 1;
+    int n; /* degree of polynomials */
+    int thread_count;
+
+    /* Parse inputs and error check */
+    if (argc != 3) Usage(argv[0]);
+
+    n = strtol(argv[1], NULL, 10);
+    if (n <= 0) Usage(argv[0]);
+
+    thread_count = strtol(argv[2], NULL, 10);
+    if (thread_count <= 0) Usage(argv[0]);
+
+    /* Timing variables */
+    struct timespec start, end;
+    double time, time_gen;
+
+    /* Generate the two polynomials */
+    printf("Generating Polynomials...\n");
+    size_t max_coeff = 9; /* maximum coefficient value (absolute value) */
+    const long long *A, *B;
+    clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
+    A = generate_random_poly((size_t) n, max_coeff);
+    B = generate_random_poly((size_t) n, max_coeff);
+    clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
+
+    /* elapsed time */
+    time_gen = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; 
+    printf("  Generate Time (s): %9.6f\n", time_gen);  
+
+
+    /* Polynomial Multiplication */
+    long long *R_serial, *R_parallel;
+    R_serial = calloc((size_t)2*n + 1, sizeof(long long)); /* degree of result is n+m, so size is n+m+1 */
+    R_parallel = calloc((size_t)2*n + 1, sizeof(long long)); 
+    if (!R_serial) {
+        perror("calloc R_serial");
+        exit(EXIT_FAILURE);
+    }
+    if (!R_parallel) {
+        perror("calloc R_parallel");
+        exit(EXIT_FAILURE);
     }
 
-    int max = 9;
-    size_t n; // example 10e6 
-    size_t num_threads;
-    double time, time_gen;
-    struct timespec begin1,end1;
-    //input values
-    n = strtoul(argv[1], NULL, 10);
-    num_threads = strtoul(argv[2], NULL, 10);
-
-    printf("Generating Polynomials...\n");
-    //Begining time for generate 
-    clock_gettime(CLOCK_MONOTONIC, &begin1);
-    //generate the polynomials. 
-    const long long *A,*B;
-    A = generate_random_poly(n, max);
-    B = generate_random_poly(n, max);
-    //complete the generation 
-    //time calculation 
-    clock_gettime(CLOCK_MONOTONIC, &end1);
-    time_gen = (end1.tv_sec - begin1.tv_sec) + (end1.tv_nsec - begin1.tv_nsec) / 1e9;
-    printf("    Generate Time (s): %9.6f\n", time_gen);  
-
-
- //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-    long long *R_serial, *R_parallel;
-    R_serial = calloc((size_t)2*n + 1, sizeof(long long)); // maybe size n + m + 1 | will see
-    R_parallel = calloc((size_t)2*n + 1, sizeof(long long)); 
-
-    //Calculate multiplication in serial 
+    /* Serial Poly Multiplication */ 
     printf("\nSerial Multiplication...\n");
     R_serial = m_serial(A, n, B, n, &time);
-    printf("    Serial Time (s):   %9.6f\n", time);
+    printf("  Serial Time (s):   %9.6f\n", time);
     double serial_time = time;
 
-    //Calculate multiplication in parallel
+    /* Parallel Poly Multiplication */ 
     printf("\nParallel Multiplication...\n");
-    R_parallel = m_parallel(A, n, B, n, num_threads, &time);
-    printf("    Parallel Time (s): %9.6f\n", time);
+    R_parallel = m_parallel(A, n, B, n, thread_count, &time);
+    printf("  Parallel Time (s): %9.6f\n", time);
     double parallel_time = time;
 
-    //Calculate speedup
+    /* Speedup calculation */ 
     printf("\nSpeedup: %.3f\n", serial_time/parallel_time);
     printf("\n");
 
-    //````````````````````````````````````````````````````````````
-    //time to compare them 
-    for (size_t i = 0; i < 2*n + 1; i++){
+    /* Confirm parallel result correctness */
+    for (size_t i = 0; i < (size_t) 2*n + 1; i++){
         if (R_serial[i] != R_parallel[i]) {
-                printf("Mismatch at i=%ld: serial=%lld, parallel=%lld\n", i,R_serial[i], R_parallel[i]);
-                printf("ERROR\n");
-                return 1;
+            printf("Mismatch at i=%ld: serial=%lld, parallel=%lld\n", i, R_serial[i], R_parallel[i]);
+            printf("ERROR\n");
+            return 1;
         }
     }
     printf("Results match!\n");
     
+    /* Free allocated memory */
     free(R_serial);
     free(R_parallel);
+
     return 0;
-} /*main*/
+} /* main */
+
+/*--------------------------------------------------------------------
+ * Function:  Usage
+ * Purpose:   Print a message indicating how program should be started
+ *            and terminate.
+ */
+void Usage(char *prog_name) {
+   fprintf(stderr, "Usage: %s <degree> <thread_count>\n", prog_name);
+   fprintf(stderr, "   degree should be positive\n");
+   fprintf(stderr, "   thread_count should be positive\n");
+   exit(0);
+}  /* Usage */

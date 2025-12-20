@@ -3,6 +3,6 @@
 
 #include <stddef.h> /* defines size_t */
 
-long long  *m_parallel(const long long *A, size_t n, const long long *B, size_t m, size_t num_threads, double *time);
+long long *m_parallel(const long long *A, size_t n, const long long *B, size_t m, size_t num_threads, double *time);
 
 #endif

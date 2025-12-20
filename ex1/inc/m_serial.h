@@ -3,6 +3,6 @@
 
 #include <stddef.h> /* defines size_t */
 
-long long  *m_serial(const long long *A, size_t n, const long long *B, size_t m, double *time);
+long long *m_serial(const long long *A, size_t n, const long long *B, size_t m, double *time);
 
 #endif
