@@ -49,12 +49,16 @@ int  main(int argc, char* argv[]) {
 
 
     /* Sorting */
+
+    /* Allocate temp array to be used by the algorithms */
+    int *tmp = malloc( size * sizeof(int));
+
     if(!parallel_mode)
     {
         /* Serial MergeSort */ 
         printf("\nSerial Mergesort...\n");
         clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-        mergesort(A, 0, size);
+        mergesort(A, tmp, 0, size-1);
         clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
         elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; 
         printf("  Serial Time (s):   %9.6f\n", elapsed_time);
@@ -64,7 +68,7 @@ int  main(int argc, char* argv[]) {
         /* Parallel MergeSort */ 
         printf("\nParallel Mergesort...\n");
         clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-        parallel_mergesort(A, 0, size);
+        start_parallel_mergesort(A, tmp, 0, size-1, (size_t) thread_count);
         clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
         elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; 
         printf("  Parallel Time (s):   %9.6f\n", elapsed_time);
@@ -78,9 +82,12 @@ int  main(int argc, char* argv[]) {
         }
     }
     printf("Correct sorting!\n");
-    for(int i = 0; i < 20; i++)
+    for(int i = 0; i < (size>20 ? 20 : size); i++)
         printf("%d, ", A[i]);
     puts("");
+
+    /* Free allocated memory */
+    free(tmp);
 
     return 0;
 } /* main */
