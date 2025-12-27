@@ -9,8 +9,8 @@
 void Usage(char* prog_name);
 
 int  main(int argc, char* argv[]) {
-    long long size; /* size of integer array */
-    int parallel_mode = 0; /* default serial mode */
+    long long size;         /* size of integer array */
+    int parallel_mode = 0;  /* default serial mode */
     int thread_count;
 
     /* Parse inputs and error check */
@@ -19,7 +19,7 @@ int  main(int argc, char* argv[]) {
     size = strtoll(argv[1], NULL, 10);
     if (size <= 0) Usage(argv[0]);
 
-    char sorp = argv[2][0];
+    char sorp = argv[2][0]; /* serial or parallel execution by user input */
     if (sorp != 's' && sorp != 'S' && sorp != 'p' && sorp != 'P') Usage(argv[0]);
     if (sorp == 'p' || sorp == 'P') {
         parallel_mode = 1;
@@ -35,9 +35,9 @@ int  main(int argc, char* argv[]) {
     struct timespec start, end;
     double elapsed_time, time_gen;
 
-    /* Generate the array of integers */
+    /* -------------------- Generate the array of integers ---------------------- */
     printf("Generating Array of integers...\n");
-    int *A;
+    int *A; /* pointer to the array of integers */
     srand((unsigned) time(NULL));
     clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
     A = gen_rand_int_array(size);
@@ -48,7 +48,7 @@ int  main(int argc, char* argv[]) {
     printf("  Generate Time (s): %9.6f\n", time_gen);  
 
 
-    /* Sorting */
+    /* -------------------------------- Sorting --------------------------------- */
 
     /* Allocate temp array to be used by the algorithms */
     int *tmp = malloc( size * sizeof(int));
@@ -68,23 +68,31 @@ int  main(int argc, char* argv[]) {
         /* Parallel MergeSort */ 
         printf("\nParallel Mergesort...\n");
         clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-        start_parallel_mergesort(A, tmp, 0, size-1, (size_t) thread_count);
+        begin_parallel_mergesort(A, tmp, 0, size-1, (size_t) thread_count);
         clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
         elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; 
         printf("  Parallel Time (s):   %9.6f\n", elapsed_time);
     }
 
-    /* Confirm sorting correctness */
+    /* ---------------------------- Confirm sorting correctness ---------------------------- */
+    int correct_sorting = 1;
     for (long long i = 0; i < size-1 ; i++){
         if (A[i] > A[i+1]) {
-            printf("Error at i=%lld: A[%lld] = %d > %d = A[%lld]\n", i, i, A[i], A[i+1], i+1);
-            return 1;
+            printf("  Mistake at i=%lld: A[%lld] = %d > %d = A[%lld]\n", i, i, A[i], A[i+1], i+1);
+            correct_sorting = 0;
+            break;
         }
     }
-    printf("Correct sorting!\n");
-    for(int i = 0; i < (size>20 ? 20 : size); i++)
-        printf("%d, ", A[i]);
-    puts("");
+
+    if (correct_sorting) {
+        printf("\nCorrect sorting!\n");
+        /* Print up to 20 first elements just to check */
+        for(int i = 0; i < (size>20 ? 20 : size); i++)
+            printf("%d, ", A[i]);
+        puts("");
+    } else {
+        printf("\nERROR: Incorrect sorting!\n");
+    }
 
     /* Free allocated memory */
     free(tmp);

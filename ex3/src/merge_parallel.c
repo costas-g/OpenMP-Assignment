@@ -4,45 +4,16 @@
 #endif
 
 #include "merge_parallel.h"
+#include "merge_serial.h" /* for the merge function */
 
-long long TASK_CUTOFF;
-
-void parallel_merge(int *arr, int *tmp, long long l, long long m, long long r) {
-    long long left = l;         /* index for left half */
-    long long right = m + 1;    /* index for right half */
-    long long index = l;        /* index for tmp array */
-
-    /* start sorting the two halves into tmp */
-    while (left <= m && right <= r) {
-        if (arr[left] < arr[right]) {
-            tmp[index++] = arr[left];
-            left++;
-        } else {
-            tmp[index++] = arr[right];
-            right++;
-        }
-    }
-
-    /* copy rest from left half into tmp array */
-    while (left <= m) {
-        tmp[index++] = arr[left];
-        left++;
-    }
-    /* or copy rest from right half into tmp array */
-    while (right <= r) {
-        tmp[index++] = arr[right];
-        right++;
-    }
-
-    /* copy sorted tmp array back into input array */
-    for (long long i = l; i <= r; i++) {
-        arr[i] = tmp[i];
-    }
-}
+/* The same sequential merge function is used */
 
 #include <stdio.h>
 int DEBUG = 0;
 
+long long TASK_CUTOFF; /* subarray size below which no further tasks are created */
+
+/* Recursive parallel mergesort algorthm using tasks */
 void parallel_mergesort(int *arr, int *tmp, long long l, long long r) {
     // printf("Thread %d > mergesort(arr, %lld, %lld)\n", omp_get_thread_num(), l, r);
     if (l < r) {
@@ -66,13 +37,14 @@ void parallel_mergesort(int *arr, int *tmp, long long l, long long r) {
         }
         
         # pragma omp taskwait
-        parallel_merge(arr, tmp, l, mid, r);
+        merge(arr, tmp, l, mid, r);
     }
     // printf("Thread %d > mergesort(arr, %lld, %lld) finished\n", omp_get_thread_num(), l, r);
 }
 
-void start_parallel_mergesort(int *arr, int *tmp, long long l, long long r, size_t thread_count) {
-    long long size = r - l + 1;
+/* Entry point for the parallel mergesort function */
+void begin_parallel_mergesort(int *arr, int *tmp, long long l, long long r, size_t thread_count) {
+    long long size = r - l + 1; /* size of the full array */
     size_t avg_tasks_per_thread = 4; /* 2-8? */
     TASK_CUTOFF = size/(avg_tasks_per_thread * thread_count);
     /* or */
@@ -83,7 +55,7 @@ void start_parallel_mergesort(int *arr, int *tmp, long long l, long long r, size
 
     # pragma omp parallel num_threads(thread_count)
     {
-        # pragma omp single 
+        # pragma omp single
         {
             if (DEBUG) printf("Thread %d > mergesort(arr, %lld, %lld)\n", omp_get_thread_num(), l, r);
             parallel_mergesort(arr, tmp, l, r);

@@ -3,6 +3,7 @@
 
 #include "gen_rand_int_array.h"
 
+/* Allocates an array of <size> integers and returns a pointer to it */
 int *gen_rand_int_array(long long size){
     int *arr = malloc((size_t)(size) * sizeof(int));
     if (!arr) {

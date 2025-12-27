@@ -2,6 +2,7 @@
 
 #include<stdlib.h>
 
+/* Textbook merge function using a pre-allocated temporary array */
 void merge(int *arr, int *tmp, long long l, long long m, long long r) {
     long long left = l;         /* index for left half */
     long long right = m + 1;    /* index for right half */
@@ -35,6 +36,7 @@ void merge(int *arr, int *tmp, long long l, long long m, long long r) {
     }
 }
 
+/* Textbook mergesort function using a pre-allocated temporary array */
 void mergesort(int *arr, int *tmp, long long l, long long r) {
     if (l < r) {
         long long mid = l + (r - l) / 2; // (l + r) / 2;
