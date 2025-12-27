@@ -3,10 +3,7 @@
 
 #include "gen_sparse_matrix.h"
 
-/* Allocates memory for a matrix, fills it with random integers with given sparsity, and returns a double pointer to it (pointer to rows).
- * Also, assigns the input variable nnz to the number of non-zero elements generated.
- */
-int **gen_sparse_matrix(long long rows, long long cols, size_t sparsity, long long *nnz){
+int **gen_sparse_matrix(long long rows, long long cols, size_t sparsity, long long *nnz, int max_val){
     /* Allocation for all the matrix elements, initialized to 0 */
     int *data = calloc((size_t)(rows * cols), sizeof(int));
     if (!data) {
@@ -28,7 +25,7 @@ int **gen_sparse_matrix(long long rows, long long cols, size_t sparsity, long lo
 
     /* Generate random values and count the number of non-zero elements */
     *nnz = 0;
-    int max_val = 10;//RAND_MAX;
+    if (max_val < 2) max_val = RAND_MAX;
     for (long long i = 0; i < rows; i++){
         for (long long j = 0; j < cols; j++){
             /* Apply sparsity */
