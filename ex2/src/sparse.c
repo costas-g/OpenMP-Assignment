@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 
-#include "gen_rand_int_array.h"
+#include "gen_int_array.h"
 #include "gen_sparse_matrix.h"
 #include "sparse_matrix_csr.h"
 
@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     int **mtx;      /* pointer to the matrix of integers (like an array of int pointers)*/
     long long nnz;  /* number of non-zero elements generated */
         clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-            mtx = gen_sparse_matrix(matrix_size, matrix_size, sparsity, &nnz);
+            mtx = gen_sparse_matrix(matrix_size, matrix_size, sparsity, &nnz, 10);
         clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
     gen_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
     printf("  Matrix generate Time (s): %9.6f\n", gen_time);
@@ -44,7 +44,7 @@ int main(int argc, char* argv[]) {
     printf("\nGenerating the vector array of integers...\n");
     int *vec; /* pointer to the vector array of integers */
         clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-            vec = gen_rand_int_array(matrix_size);
+            vec = gen_int_array(matrix_size, 10);
         clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
     gen_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
     printf("  Vector generate Time (s): %9.6f\n", gen_time);
@@ -71,7 +71,7 @@ int main(int argc, char* argv[]) {
     build_csr_matrix_parallel(mtx, mtx_csr_parallel_ptr, rows, cols, nnz, (size_t) thread_count);
     clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
     elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; 
-    printf("  Parallel CSR build time (s):   %9.6f\n", elapsed_time);
+    printf("  Parallel CSR build time (s): %9.6f\n", elapsed_time);
 
     /* ----------------------- Confirm CSR building correctness ----------------------- */
     printf("\nChecking CSR Build correctness...\n");
@@ -83,8 +83,8 @@ int main(int argc, char* argv[]) {
         printf("  ERROR: Incorrect CSR build!\n");
     }
 
-    print_csr_matrix(mtx_csr_ptr, nnz);
-    print_csr_matrix(mtx_csr_parallel_ptr, nnz);
+    // print_csr_matrix(mtx_csr_ptr, nnz);
+    // print_csr_matrix(mtx_csr_parallel_ptr, nnz);
 
     /* Free allocated memory */
     free(mtx[0]); // frees the contiguous data block
