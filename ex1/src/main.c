@@ -10,7 +10,7 @@
 void Usage(char* prog_name);
 // long long *generate_random_poly(size_t n, size_t max_coeff);
 
-int  main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
     int n; /* degree of polynomials */
     int thread_count;
 
@@ -83,6 +83,8 @@ int  main(int argc, char* argv[]) {
     /* Free allocated memory */
     free(R_serial);
     free(R_parallel);
+    free(A);
+    free(B);
 
     return 0;
 } /* main */

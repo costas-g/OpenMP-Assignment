@@ -8,7 +8,7 @@
 
 void Usage(char* prog_name);
 
-int  main(int argc, char* argv[]) {
+int main(int argc, char* argv[]) {
     long long size;         /* size of integer array */
     int parallel_mode = 0;  /* default serial mode */
     int thread_count;
@@ -33,7 +33,7 @@ int  main(int argc, char* argv[]) {
 
     /* Timing variables */
     struct timespec start, end;
-    double elapsed_time, time_gen;
+    double elapsed_time, gen_time;
 
     /* -------------------- Generate the array of integers ---------------------- */
     printf("Generating Array of integers...\n");
@@ -44,8 +44,8 @@ int  main(int argc, char* argv[]) {
     clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
 
     /* elapsed time */
-    time_gen = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; 
-    printf("  Generate Time (s): %9.6f\n", time_gen);  
+    gen_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; 
+    printf("  Generate Time (s): %9.6f\n", gen_time);  
 
 
     /* -------------------------------- Sorting --------------------------------- */
@@ -75,6 +75,7 @@ int  main(int argc, char* argv[]) {
     }
 
     /* ---------------------------- Confirm sorting correctness ---------------------------- */
+    printf("\nChecking Correctness...\n");
     int correct_sorting = 1;
     for (long long i = 0; i < size-1 ; i++){
         if (A[i] > A[i+1]) {
@@ -85,17 +86,18 @@ int  main(int argc, char* argv[]) {
     }
 
     if (correct_sorting) {
-        printf("\nCorrect sorting!\n");
+        printf("  Correct sorting!\n");
         /* Print up to 20 first elements just to check */
         for(int i = 0; i < (size>20 ? 20 : size); i++)
             printf("%d, ", A[i]);
         puts("");
     } else {
-        printf("\nERROR: Incorrect sorting!\n");
+        printf("  ERROR: Incorrect sorting!\n");
     }
 
     /* Free allocated memory */
     free(tmp);
+    free(A);
 
     return 0;
 } /* main */
