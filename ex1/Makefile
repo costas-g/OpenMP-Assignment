@@ -54,7 +54,7 @@ $(BIN_DIR):
 
 # Delete all binaries
 clean:
-	$(RM) $(OBJS) $(BIN_DIR)/* 
+	$(RM) $(BUILD_DIR)/*  $(BIN_DIR)/* 
 
 # Delete all built directories
 fclean:
