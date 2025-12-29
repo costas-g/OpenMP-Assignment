@@ -1,9 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 #include "gen_sparse_matrix.h"
 
-int **gen_sparse_matrix(long long rows, long long cols, size_t sparsity, long long *nnz, int max_val){
+int **gen_sparse_matrix(long long rows, long long cols, float sparsity, int max_val, int thread_count, struct xorshift32_state *state, long long *nnz){
     /* Allocation for all the matrix elements, initialized to 0 */
     int *data = calloc((size_t)(rows * cols), sizeof(int));
     if (!data) {
@@ -22,21 +25,37 @@ int **gen_sparse_matrix(long long rows, long long cols, size_t sparsity, long lo
     for (long long i = 0; i < rows; i++){
         mtx[i] = &data[i * cols];
     }
-
+    
     /* Generate random values and count the number of non-zero elements */
-    *nnz = 0;
-    if (max_val < 2) max_val = RAND_MAX;
-    for (long long i = 0; i < rows; i++){
-        for (long long j = 0; j < cols; j++){
-            /* Apply sparsity */
-            if ((size_t)(rand() % 101) > sparsity){
-                do 
-                    mtx[i][j] = (rand() % max_val);// - max_val/2; /* in range [-max_val/2, max_val/2 - 1] */
-                while (mtx[i][j] == 0);
-                (*nnz)++;
+    long long nnz_global;
+    uint32_t num_threads = thread_count;
+    if (max_val < 1) max_val = RAND_MAX;
+    if (thread_count < 1) num_threads = 1;
+    # pragma omp parallel num_threads(num_threads)
+    {
+        #ifdef _OPENMP
+        int tid = omp_get_thread_num();
+        // int nthreads = omp_get_num_threads();
+        #else
+        int tid = 0;
+        // int nthreads = 1;
+        #endif
+
+        struct xorshift32_state my_state;
+        my_state.a = state->a + tid;
+
+        # pragma omp for reduction(+:nnz_global)
+        for (long long i = 0; i < rows; i++){
+            for (long long j = 0; j < cols; j++){
+                if ((xorshift32(&my_state) % 10000) >= (size_t)(sparsity*10000)) /* Apply sparsity */ {
+                    mtx[i][j] = xorshift32(&my_state) % max_val + 1; /* in range [1, max_val] */
+                    nnz_global++;
+                }
             }
         }
     }
+
+    *nnz = nnz_global;
     
     return mtx;
 }
