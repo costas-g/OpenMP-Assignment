@@ -5,6 +5,7 @@
 #include "gen_int_array.h"
 #include "gen_sparse_matrix.h"
 #include "sparse_matrix_csr.h"
+#include "matvecs.h"
 
 void Usage(char* prog_name);
 
@@ -19,7 +20,7 @@ int main(int argc, char* argv[]) {
 
     matrix_size  = strtoll(argv[1], NULL, 10); if (matrix_size  <= 0) Usage(argv[0]);
     sparsity     =  strtof(argv[2], NULL);     if (sparsity     <  0 || sparsity >= 1) Usage(argv[0]);
-    num_mults    =  strtol(argv[3], NULL, 10); if (num_mults    <= 0) Usage(argv[0]);
+    num_mults    =  strtol(argv[3], NULL, 10); if (num_mults    <  0) Usage(argv[0]);
     thread_count =  strtol(argv[4], NULL, 10); if (thread_count <= 0) Usage(argv[0]);
 
     long long rows = matrix_size, cols = matrix_size;
@@ -33,6 +34,7 @@ int main(int argc, char* argv[]) {
     struct xorshift32_state prng_state;
     prng_state.a = (unsigned int) time(NULL); /* seed the PRNG */
 
+
     /* -------------------- Generate the matrix and the array of integers ---------------------- */
     printf("\nGenerating the square matrix of integers...\n");
     int **mtx_p;      /* pointer to the matrix of integers (like an array of int pointers)*/
@@ -41,7 +43,7 @@ int main(int argc, char* argv[]) {
             mtx_p = gen_sparse_matrix(rows, cols, sparsity, 10, thread_count, &prng_state, &nnz);
         clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
     gen_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
-    printf("  Matrix generate Time (s): %9.6f\n", gen_time);
+    printf("  Matrix generation time (s): %9.6f\n", gen_time);
     printf("  NNZ generated: %lld\n", nnz);
 
     printf("\nGenerating the vector array of integers...\n");
@@ -50,7 +52,36 @@ int main(int argc, char* argv[]) {
             vec = gen_int_array(cols, 10);
         clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
     gen_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
-    printf("  Vector generate Time (s): %9.6f\n", gen_time);
+    printf("  Vector generation time (s): %9.6f\n", gen_time);
+
+
+    /* -------------------- Dense matrix repeated multiplication ---------------------- */
+    
+    int *vec_res          = malloc(rows * sizeof(int));
+    int *vec_res_parallel = malloc(rows * sizeof(int));
+    printf("\nDense matrix repeated multiplication SERIAL...\n");
+        clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
+            matvecs(mtx_p, vec, vec_res, matrix_size, num_mults);
+        clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
+    elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
+    printf("  Dense matrix %dx mult Serial time (s): %9.6f\n", num_mults, elapsed_time);
+    // print_matrix(mtx_p, rows, cols);
+    // print_vector(vec, rows);
+    // print_vector(vec_res, rows);
+    printf("\nDense matrix repeated multiplication PARALLEL...\n");
+        clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
+            matvecs_parallel(mtx_p, vec, vec_res_parallel, matrix_size, num_mults, thread_count);
+        clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
+    elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
+    printf("  Dense matrix %dx mult Parallel time (s): %9.6f\n", num_mults, elapsed_time);
+    // print_vector(vec_res_parallel, rows);
+
+    long long nerrors = vectors_diffs(vec_res, vec_res_parallel, matrix_size);
+    if (nerrors == 0) {
+        printf("  Results match!\n");
+    } else {
+        printf("  ERROR: Results mismatch! # of errors = %lld\n", nerrors);
+    }
 
 
     /* ----------------------- Build CSR Representation ----------------------- */
@@ -93,6 +124,8 @@ int main(int argc, char* argv[]) {
     free(mtx_p[0]); // frees the contiguous data block
     free(mtx_p);
     free(vec);
+    free(vec_res);
+    free(vec_res_parallel);
     free_csr_matrix(mtx_csr_ptr);
     free_csr_matrix(mtx_csr_parallel_ptr);
 
@@ -108,7 +141,7 @@ void Usage(char *prog_name) {
    fprintf(stderr, "Usage: %s <matrix_size> <sparsity> <num_mults> <thread_count>\n", prog_name);
    fprintf(stderr, "   matrix_size: Row/column size (square matrix). Should be positive.\n");
    fprintf(stderr, "   sparsity: Percentage of zero-elements. Should be a float from 0 to 1.\n");
-   fprintf(stderr, "   num_mults: Number of repeated multiplications. Should be positive.\n");
+   fprintf(stderr, "   num_mults: Number of repeated multiplications. Should be non-negative.\n");
    fprintf(stderr, "   thread_count: Number of threads. Should be positive.\n");
    exit(0);
 }  /* Usage */
