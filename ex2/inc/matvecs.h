@@ -1,7 +1,7 @@
 #ifndef matvecs_h_
 #define matvecs_h_
 
-/* Repeated matrix-vector multiplication. Returns a pointer to a newly allocated vector. 
+/* Repeated matrix-vector multiplication.
 A is the input matrix. Matrix has to be square.
 x is the input vector. 
 res is the output vector. It should be pre-allocated. 
@@ -11,11 +11,5 @@ void matvecs(int **A, int *x, int *res, long long size, int iters);
 
 /* Same as matvecs but in parallel, with THREAD_COUNT threads. */
 void matvecs_parallel(int **A, int *x, int *res, long long size, int iters, int thread_count);
-
-long long vectors_diffs(int* vec_a, int* vec_b, long long size);
-
-void print_matrix(int **mtx, long long rows, long long cols);
-
-void print_vector(int *vec, long long size);
 
 #endif

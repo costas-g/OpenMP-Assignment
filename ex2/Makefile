@@ -25,9 +25,12 @@ SRC_FILES = $(wildcard $(SRC_DIR)/*.c)
 TARGET_EXEC = $(EXEC_NAME:%=$(BIN_DIR)/%)
 # BIN_OBJS = $(OBJS:%.o=$(BIN_DIR)/%.o)
 EXECUTABLES = $(patsubst $(SRC_DIR)/%.c,$(BIN_DIR)/%,$(SRC_FILES)) # to create executables directly for every .c
-OBJS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC_FILES))
+OBJS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SRC_FILES))# one object file for every .c file
 
 all: $(TARGET_EXEC)
+
+debug: CFLAGS += -DDEBUG
+debug: all
 
 execs: $(EXECUTABLES)
 

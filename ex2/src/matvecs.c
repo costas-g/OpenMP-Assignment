@@ -5,6 +5,7 @@
 #endif
 
 #include "matvecs.h"
+// #include "util_matvec.h"
 
 void matvecs(int **A, int *x, int *res, long long size, int iters){
     long long i, j;
@@ -62,6 +63,8 @@ void matvecs_parallel(int **A, int *x, int *res, long long size, int iters, int 
         return;
     }
 
+    /* global pointer that can point to all threads' intermediate results arrays 
+     * thus every thread may write to any thread's intermediate result to complete its array before the next synced stage/iteration */
     int ***res_currs = malloc(thread_count * sizeof(int**));
 
     # pragma omp parallel num_threads(thread_count)
@@ -74,10 +77,14 @@ void matvecs_parallel(int **A, int *x, int *res, long long size, int iters, int 
         int nthreads = 1;
         #endif
 
+        /* Pointer that can point to two arrays. The two arrays will be use as intermediate result arrays 
+         * In each stage/iteration, one is used as input to be read and the other gets written with the result. 
+         * At every next stage, they are switched, so that the result array is now read as input and the input array is overwrritten with the new result.  */
         int **x_tmp = malloc(2 * sizeof(int*));
-        x_tmp[0] = malloc(2 * size * sizeof(int));
-        x_tmp[1] = &x_tmp[0][size];
+        x_tmp[0] = malloc(2 * size * sizeof(int)); /* allocate memory for the two arrays and assign them */
+        x_tmp[1] = &x_tmp[0][size]; /* assign the address of the second array to the pointer x_tmp[1] */
 
+        /* each thread assigns its intermediate results arrays to the global pointer */
         res_currs[tid] = x_tmp;
 
         /* Copy input x vector to intermediate x_tmp vector. */
@@ -85,19 +92,20 @@ void matvecs_parallel(int **A, int *x, int *res, long long size, int iters, int 
             x_tmp[0][i] = x[i];
         }
         
-        int *x_curr,    *res_curr;
-        int  x_curr_idx, res_curr_idx;
-        long long my_start_idx = -1, my_end_idx = -1;
+        int *x_curr,    *res_curr; /* local, temporary pointers */
+        int  x_curr_idx, res_curr_idx; /* index to select one of the two intermediate results arrays */
+        long long my_start_idx = -1, my_end_idx = -1; /* record each thread's start and end row */
 
         for (int r = 0; r < iters; r++) {
+            /* one index will be 0 and the other will be 1, interchanged after each iteration */
             x_curr_idx   =      r  % 2;
             res_curr_idx = (r + 1) % 2;
-            x_curr = x_tmp[x_curr_idx];
-            res_curr = x_tmp[res_curr_idx];
+            x_curr = x_tmp[x_curr_idx];     /* pointer assignment */
+            res_curr = x_tmp[res_curr_idx]; /* pointer assignment */
             # pragma omp for 
             for (long long i = 0; i < size; i++) {
-                if(my_start_idx < 0) my_start_idx = i;
-                my_end_idx = i + 1;
+                if(my_start_idx < 0) my_start_idx = i;  /* record the thread's start row */
+                my_end_idx = i + 1;                     /* record the thread's end row */
                 res_curr[i] = 0;
                 for (long long j = 0; j < size; j++) {
                     res_curr[i] += A[i][j] * x_curr[j];
@@ -142,32 +150,4 @@ void matvecs_parallel(int **A, int *x, int *res, long long size, int iters, int 
     free(res_currs);
 
     return;
-}
-
-long long vectors_diffs(int* vec_a, int* vec_b, long long size) {
-    long long num_errors = 0;
-    for (long long i = 0; i < size; i++) {
-        if (vec_a[i] != vec_b[i]) {
-            num_errors++;
-        }
-    }
-    return num_errors;
-}
-
-void print_matrix(int **mtx, long long rows, long long cols) {
-    long long i, j;
-    for (i = 0; i < rows; i++) {
-        for (j = 0; j < cols; j++) {
-            printf("%d, ", mtx[i][j]);
-        }
-        puts("");
-    }
-}
-
-void print_vector(int *vec, long long size) {
-    long long i;
-    for (i = 0; i < size; i++) {
-        printf("%d, ", vec[i]);
-    }
-    puts("");
 }
