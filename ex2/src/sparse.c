@@ -6,6 +6,8 @@
 #include "gen_sparse_matrix.h"
 #include "sparse_matrix_csr.h"
 #include "matvecs.h"
+#include "matvecs_csr.h"
+#include "util_matvec.h"
 
 void Usage(char* prog_name);
 
@@ -120,6 +122,46 @@ int main(int argc, char* argv[]) {
     // print_csr_matrix(mtx_csr_ptr, nnz);
     // print_csr_matrix(mtx_csr_parallel_ptr, nnz);
 
+
+    /* -------------------- Sparse matrix repeated multiplication ---------------------- */
+    
+    int *vec_res_sparse          = malloc(rows * sizeof(int));
+    int *vec_res_sparse_parallel = malloc(rows * sizeof(int));
+    printf("\nSparse matrix repeated multiplication SERIAL...\n");
+        clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
+            matvecs_csr(mtx_csr_ptr, vec, vec_res_sparse, num_mults);
+        clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
+    elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
+    printf("  Sparse matrix %dx mult Serial time (s): %9.6f\n", num_mults, elapsed_time);
+    // print_matrix(mtx_p, rows, cols);
+    // print_vector(vec, rows);
+    // print_vector(vec_res_sparse, rows);
+    printf("\nSparse matrix repeated multiplication PARALLEL...\n");
+        clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
+            matvecs_csr_parallel(mtx_csr_ptr, vec, vec_res_parallel, num_mults, thread_count);
+        clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
+    elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
+    printf("  Sparse matrix %dx mult Parallel time (s): %9.6f\n", num_mults, elapsed_time);
+    // print_vector(vec_res_sparse_parallel, rows);
+
+    nerrors = vectors_diffs(vec_res_sparse, vec_res_sparse_parallel, matrix_size);
+    if (nerrors == 0) {
+        printf("  Results match!\n");
+    } else {
+        printf("  ERROR: Results mismatch! # of errors = %lld\n", nerrors);
+    }
+
+    /* -------------------- Compare Dense vs CSR ---------------------- */
+    printf("\nDense vs Sparse matrix multiplication compare...\n");
+    nerrors = vectors_diffs(vec_res, vec_res_sparse, matrix_size);
+    if (nerrors == 0) {
+        printf("  Results match!\n");
+    } else {
+        printf("  ERROR: Results mismatch! # of errors = %lld\n", nerrors);
+    }
+
+
+    /* -------------------- Cleanup ---------------------- */
     /* Free allocated memory */
     free(mtx_p[0]); // frees the contiguous data block
     free(mtx_p);

@@ -2,8 +2,8 @@
 #define sparse_matrix_csr_h_
 
 /* Struct that holds the pointers to the arrays of the CSR sparse matrix representation. 
- * Fields: values, col_index, row_ptr. 
  * Also holds the number of rows in the rows field. 
+ * Fields: rows, values, col_index, row_ptr. 
  */
 struct sparse_matrix_csr { 
     long long rows;
