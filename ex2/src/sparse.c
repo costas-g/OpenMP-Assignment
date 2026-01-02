@@ -36,7 +36,7 @@ int main(int argc, char* argv[]) {
     struct xorshift32_state prng_state;
     prng_state.a = (unsigned int) time(NULL); /* seed the PRNG */
 
-
+    printf("\n================================================");
     /* -------------------- Generate the matrix and the array of integers ---------------------- */
     printf("\nGenerating the square matrix of integers...\n");
     int **mtx_p;      /* pointer to the matrix of integers (like an array of int pointers)*/
@@ -56,38 +56,9 @@ int main(int argc, char* argv[]) {
     gen_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
     printf("  Vector generation time (s): %9.6f\n", gen_time);
 
-
-    /* -------------------- Dense matrix repeated multiplication ---------------------- */
     
-    int *vec_res          = malloc(rows * sizeof(int));
-    int *vec_res_parallel = malloc(rows * sizeof(int));
-    printf("\nDense matrix repeated multiplication SERIAL...\n");
-        clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-            matvecs(mtx_p, vec, vec_res, matrix_size, num_mults);
-        clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
-    elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
-    printf("  Dense matrix %dx mult Serial time (s): %9.6f\n", num_mults, elapsed_time);
-    // print_matrix(mtx_p, rows, cols);
-    // print_vector(vec, rows);
-    // print_vector(vec_res, rows);
-    printf("\nDense matrix repeated multiplication PARALLEL...\n");
-        clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-            matvecs_parallel(mtx_p, vec, vec_res_parallel, matrix_size, num_mults, thread_count);
-        clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
-    elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
-    printf("  Dense matrix %dx mult Parallel time (s): %9.6f\n", num_mults, elapsed_time);
-    // print_vector(vec_res_parallel, rows);
-
-    long long nerrors = vectors_diffs(vec_res, vec_res_parallel, matrix_size);
-    if (nerrors == 0) {
-        printf("  Results match!\n");
-    } else {
-        printf("  ERROR: Results mismatch! # of errors = %lld\n", nerrors);
-    }
-
-
-    /* ----------------------- Build CSR Representation ----------------------- */
-
+    /* ----------------------------- Build CSR Representation ----------------------------- */
+    printf("\n================================================");
     struct sparse_matrix_csr *mtx_csr_ptr          = malloc(sizeof(struct sparse_matrix_csr));
     struct sparse_matrix_csr *mtx_csr_parallel_ptr = malloc(sizeof(struct sparse_matrix_csr));
     *mtx_csr_ptr = init_csr_matrix();
@@ -109,22 +80,53 @@ int main(int argc, char* argv[]) {
     elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; 
     printf("  Parallel CSR build time (s): %9.6f\n", elapsed_time);
 
-    /* ----------------------- Confirm CSR building correctness ----------------------- */
-    printf("\nChecking CSR Build correctness...\n");
+    /* Confirm CSR building correctness */
+    printf("\nComparing Serial & Parallel CSR builds...\n");
     int correct_build = compare_csr_matrix(mtx_csr_ptr, mtx_csr_parallel_ptr, nnz);
 
     if (correct_build) {
-        printf("  Correct CSR build!\n");
+        printf("  CSR builds match!\n");
     } else {
-        printf("  ERROR: Incorrect CSR build!\n");
+        printf("  ERROR: CSR builds don't match!\n");
     }
 
     // print_csr_matrix(mtx_csr_ptr, nnz);
     // print_csr_matrix(mtx_csr_parallel_ptr, nnz);
 
 
+    /* -------------------- Dense matrix repeated multiplication ---------------------- */
+    printf("\n================================================");
+    int *vec_res          = malloc(rows * sizeof(int));
+    int *vec_res_parallel = malloc(rows * sizeof(int));
+    printf("\nDense matrix repeated multiplication SERIAL...\n");
+        clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
+            matvecs(mtx_p, vec, vec_res, matrix_size, num_mults);
+        clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
+    elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
+    printf("  Dense matrix %dx mult Serial time (s):   %9.6f\n", num_mults, elapsed_time);
+    // print_matrix(mtx_p, rows, cols);
+    // print_vector(vec, rows);
+    // print_vector(vec_res, rows);
+    printf("\nDense matrix repeated multiplication PARALLEL...\n");
+        clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
+            matvecs_parallel(mtx_p, vec, vec_res_parallel, matrix_size, num_mults, thread_count);
+        clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
+    elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
+    printf("  Dense matrix %dx mult Parallel time (s): %9.6f\n", num_mults, elapsed_time);
+    // print_vector(vec_res_parallel, rows);
+
+    /* Compare the two resulting vectors */
+    printf("\nComparing Serial & Parallel results...\n");
+    long long nerrors = vectors_diffs(vec_res, vec_res_parallel, matrix_size);
+    if (nerrors == 0) {
+        printf("  Results match!\n");
+    } else {
+        printf("  ERROR: Results mismatch! # of errors = %lld\n", nerrors);
+    }
+
+
     /* -------------------- Sparse matrix repeated multiplication ---------------------- */
-    
+    printf("\n================================================");
     int *vec_res_sparse          = malloc(rows * sizeof(int));
     int *vec_res_sparse_parallel = malloc(rows * sizeof(int));
     printf("\nSparse matrix repeated multiplication SERIAL...\n");
@@ -132,18 +134,20 @@ int main(int argc, char* argv[]) {
             matvecs_csr(mtx_csr_ptr, vec, vec_res_sparse, num_mults);
         clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
     elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
-    printf("  Sparse matrix %dx mult Serial time (s): %9.6f\n", num_mults, elapsed_time);
+    printf("  Sparse matrix %dx mult Serial time (s):   %9.6f\n", num_mults, elapsed_time);
     // print_matrix(mtx_p, rows, cols);
     // print_vector(vec, rows);
     // print_vector(vec_res_sparse, rows);
     printf("\nSparse matrix repeated multiplication PARALLEL...\n");
         clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
-            matvecs_csr_parallel(mtx_csr_ptr, vec, vec_res_parallel, num_mults, thread_count);
+            matvecs_csr_parallel(mtx_csr_ptr, vec, vec_res_sparse_parallel, num_mults, thread_count);
         clock_gettime(CLOCK_MONOTONIC, &end); /* end time */
     elapsed_time = (end.tv_sec - start.tv_sec) + (end.tv_nsec - start.tv_nsec) / 1e9; /* elapsed time */
     printf("  Sparse matrix %dx mult Parallel time (s): %9.6f\n", num_mults, elapsed_time);
     // print_vector(vec_res_sparse_parallel, rows);
 
+    /* Compare the two resulting vectors */
+    printf("\nComparing Serial & Parallel results...\n");
     nerrors = vectors_diffs(vec_res_sparse, vec_res_sparse_parallel, matrix_size);
     if (nerrors == 0) {
         printf("  Results match!\n");
@@ -151,9 +155,11 @@ int main(int argc, char* argv[]) {
         printf("  ERROR: Results mismatch! # of errors = %lld\n", nerrors);
     }
 
-    /* -------------------- Compare Dense vs CSR ---------------------- */
-    printf("\nDense vs Sparse matrix multiplication compare...\n");
-    nerrors = vectors_diffs(vec_res, vec_res_sparse, matrix_size);
+    
+    /* ------------------------------- Compare Dense vs CSR ---------------------------- */
+    printf("\n================================================");
+    printf("\nFINAL: Comparing Dense vs Sparse matrix (parallel) multiplication results...\n");
+    nerrors = vectors_diffs(vec_res_parallel, vec_res_sparse_parallel, matrix_size);
     if (nerrors == 0) {
         printf("  Results match!\n");
     } else {
@@ -161,7 +167,7 @@ int main(int argc, char* argv[]) {
     }
 
 
-    /* -------------------- Cleanup ---------------------- */
+    /* ------------------------------------ Cleanup ------------------------------------ */
     /* Free allocated memory */
     free(mtx_p[0]); // frees the contiguous data block
     free(mtx_p);
