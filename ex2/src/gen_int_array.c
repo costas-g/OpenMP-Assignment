@@ -10,9 +10,9 @@ int *gen_int_array(long long size, int max_val){
         exit(EXIT_FAILURE);
     }
 
-    // max_val = RAND_MAX;
+    if (max_val < 1) max_val = RAND_MAX;
     for (long long i = 0; i < size; i++){
-        arr[i] = (rand() % max_val) - max_val/2; /* in range [-max_val/2, max_val/2 - 1] */
+        arr[i] = rand() % max_val + 1; /* in range [1, max_val] */
     }
 
     return arr;

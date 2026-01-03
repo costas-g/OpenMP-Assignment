@@ -68,7 +68,7 @@ int build_csr_matrix_parallel(int **input_mtx, struct sparse_matrix_csr *output_
 
     /* Local variables of each thread */
     int my_val;
-    long long my_col, my_nnz = 0, my_idx = 0, my_row_idx = 0;
+    long long my_col, my_idx = 0, my_row_idx = 0;
     /* Local arrays of each thread. */
     int *val_local;
     long long *col_local, *row_local;
@@ -76,7 +76,7 @@ int build_csr_matrix_parallel(int **input_mtx, struct sparse_matrix_csr *output_
     long long *our_rows = calloc(thread_count, sizeof(long long));
     long long *our_nnzs = calloc(thread_count, sizeof(long long));
 
-    # pragma omp parallel num_threads(thread_count) private(my_val, my_col, val_local, col_local, row_local) firstprivate(my_nnz, my_idx, my_row_idx)
+    # pragma omp parallel num_threads(thread_count) private(my_val, my_col, val_local, col_local, row_local) firstprivate(my_idx, my_row_idx)
     {   
         #ifdef _OPENMP
         int tid = omp_get_thread_num();
@@ -96,8 +96,6 @@ int build_csr_matrix_parallel(int **input_mtx, struct sparse_matrix_csr *output_
         long long my_rows = my_end - my_start;
 
         // printf("Thread %d works on rows %lld to %lld. Total: %lld rows.\n", tid, my_start, my_end-1, my_rows);
-
-        # pragma omp barrier
 
         /* Each thread allocates its private array */
         /* Need to allocate nnz elements for the worst case */
@@ -203,6 +201,7 @@ void free_csr_matrix(struct sparse_matrix_csr *mtx_csr){
     free(mtx_csr->values);
     free(mtx_csr->col_index);
     free(mtx_csr->row_ptr);
+    free(mtx_csr);
 
     return;
 }
