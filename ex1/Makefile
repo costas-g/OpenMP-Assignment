@@ -8,7 +8,7 @@ BUILD_DIR = build
 
 # Compilation
 CC 		= gcc
-CFLAGS 	= -g -Wall -Wextra -I./$(INC_DIR) -fopenmp -O2
+CFLAGS 	= -g -Wall -Wextra -I./$(INC_DIR) -fopenmp -O3
 # -D_POSIX_C_SOURCE=200809L 
 
 # Commands

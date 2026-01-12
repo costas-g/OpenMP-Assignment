@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
     /* Generate the two polynomials */
     printf("Generating Polynomials...\n");
     size_t max_coeff = 9; /* maximum coefficient value (absolute value) */
-    const long long *A, *B;
+    long long *A, *B;
     clock_gettime(CLOCK_MONOTONIC, &start); /* start time */
     A = generate_random_poly((size_t) n, max_coeff);
     B = generate_random_poly((size_t) n, max_coeff);
