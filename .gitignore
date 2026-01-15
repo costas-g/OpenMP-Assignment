@@ -1,4 +1,8 @@
-# Ignore build artifacts
+# ignore build artifacts
 bin/
 *.o
+
+# ignore hidden source files
 .*.c
+.*.py
+.*.sh
