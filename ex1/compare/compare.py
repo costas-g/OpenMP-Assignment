@@ -68,12 +68,17 @@ def parse_speedup_csv(csv_path: str, backend: str) -> pd.DataFrame:
     # Normalize column names just in case (Degree vs degree etc.)
     df.columns = [c.strip().lower() for c in df.columns]
 
-    required = {"degree", "workers", "speedup"}
+    # required = {"degree", "workers", "speedup"}
+    required = {"degree", "workers", "serial_mean", "parallel_mean"}
     missing = required - set(df.columns)
     if missing:
         raise ValueError(f"Missing required columns {sorted(missing)} in {csv_path}. Found: {list(df.columns)}")
 
-    out = df[["degree", "workers", "speedup"]].copy()
+    # out = df[["degree", "workers", "speedup"]].copy()
+    out = df[["degree", "workers", "serial_mean", "parallel_mean"]].copy()
+    out["serial_min_per_degree"] = out.groupby("degree")["serial_mean"].transform("min")
+    out["speedup"] = out["serial_min_per_degree"] / out["parallel_mean"]
+
     out["backend"] = backend
 
     # enforce types
@@ -98,6 +103,9 @@ def plot_speedup_compare(df_all: pd.DataFrame) -> None:
         for backend in sorted(gdeg["backend"].unique()):
             gb = gdeg[gdeg["backend"] == backend].sort_values("workers")
             label_suffix = " (threads)" if backend == "OpenMP" else " (processes)" if backend == "MPI" else " (threads)" if backend == "Pthreads" else ""
+            # serial_min_per_degree = gb["serial_min"].min()
+            # my_speedup = serial_min_per_degree / gb["parallel_mean"]
+            # ax.plot(gb["workers"].values, my_speedup, "o--", label=backend + label_suffix)
             ax.plot(gb["workers"].values, gb["speedup"].values, "o--", label=backend + label_suffix)
 
         ax.set_xlabel("Workers")

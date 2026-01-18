@@ -11,7 +11,9 @@ df_summary = df.groupby(["degree", "workers"], as_index=False).agg(
 )
 
 # Compute speedup from mean times
-df_summary["speedup"] = df_summary["serial_mean"] / df_summary["parallel_mean"]
+# serial_min_min = df_summary["serial_min"].groupby("degree").min()
+df_summary["serial_min_per_degree"] = df_summary.groupby("degree")["serial_mean"].transform("min")
+df_summary["speedup"] = df_summary["serial_min_per_degree"] / df_summary["parallel_mean"]
 
 # Save to CSV
 df_summary.to_csv("pth_poly_results_stats.csv", index=False)
