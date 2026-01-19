@@ -59,6 +59,8 @@ def make_plots(means_csv: str) -> None:
         fig.savefig(out, format="svg", bbox_inches="tight")
         plt.close(fig)
 
+        print(f"[INFO] Saved plot: {out}")
+
     # 2) CSR mult scaling vs threads
     for N in sorted(df_ok["matrix_size"].unique()):
         subN = df_ok[df_ok["matrix_size"] == N].copy()
@@ -81,6 +83,37 @@ def make_plots(means_csv: str) -> None:
         out = os.path.join(PLOTS_DIR, f"csr_mult_speedup_N{N//1000}K.svg")
         fig.savefig(out, format="svg", bbox_inches="tight")
         plt.close(fig)
+
+        print(f"[INFO] Saved plot: {out}")
+
+    # 2.2) CSR mult scaling vs num_mults
+    for N in sorted(df_ok["matrix_size"].unique()):
+        thread_count = 4
+        subN = df_ok[(df_ok["matrix_size"] == N)  & (df_ok["threads"] == thread_count)].copy()
+        reps = sorted(subN["sparsity"].unique(), reverse=True)#[:6]
+
+        fig, ax = plt.subplots()
+        for sp in reps:
+            g = subN[subN["sparsity"] == sp].groupby("num_mults")["csr_speedup"].mean().reset_index().sort_values("num_mults")
+            ax.plot(g["num_mults"], g["csr_speedup"], "o--", label=f"sp={sp:.2f}")
+
+        # <--- Minimal fix: force integer ticks
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_xticks([1, 5, 10, 20])
+        ax.set_xlim(0, 21)
+
+        ax.set_xlabel("Repeated multiplications")
+        ax.set_ylabel("Speedup (CSR SpMV)")
+        ax.set_title(f"CSR SpMV speedup vs multiplications (N={N:,}, threads={thread_count})")
+        ax.grid(True, linestyle="--", alpha=0.6)
+        
+        ax.legend(loc="center", bbox_to_anchor=(0.75, 0.6))
+        fig.tight_layout()
+        out = os.path.join(PLOTS_DIR, f"csr_spmv_speedup_v_mults_N{N//1000}K.svg")
+        fig.savefig(out, format="svg", bbox_inches="tight")
+        plt.close(fig)
+
+        print(f"[INFO] Saved plot: {out}")
 
     # 3) Dense mult scaling vs threads
     for N in sorted(df_ok["matrix_size"].unique()):
@@ -105,6 +138,36 @@ def make_plots(means_csv: str) -> None:
         fig.savefig(out, format="svg", bbox_inches="tight")
         plt.close(fig)
 
+        print(f"[INFO] Saved plot: {out}")
+
+    # 3.2) Dense mult scaling vs num_mults
+    for N in sorted(df_ok["matrix_size"].unique()):
+        thread_count = 4
+        subN = df_ok[(df_ok["matrix_size"] == N)  & (df_ok["threads"] == thread_count)].copy()
+        reps = sorted(subN["sparsity"].unique(), reverse=True)#[:6]
+
+        fig, ax = plt.subplots()
+        for sp in reps:
+            g = subN[subN["sparsity"] == sp].groupby("num_mults")["dense_speedup"].mean().reset_index().sort_values("num_mults")
+            ax.plot(g["num_mults"], g["dense_speedup"], "o--", label=f"sp={sp:.2f}")
+
+        # <--- Minimal fix: force integer ticks
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_xticks([1, 5, 10, 20])
+        ax.set_xlim(0, 21)
+
+        ax.set_xlabel("Repeated Multiplications")
+        ax.set_ylabel("Speedup (Dense mult)")
+        ax.set_title(f"Dense mult speedup vs multiplications (N={N:,}, threads={thread_count})")
+        ax.grid(True, linestyle="--", alpha=0.6)
+        ax.legend()
+        fig.tight_layout()
+        out = os.path.join(PLOTS_DIR, f"dense_mv_speedup_v_mults_N{N//1000}K.svg")
+        fig.savefig(out, format="svg", bbox_inches="tight")
+        plt.close(fig)
+
+        print(f"[INFO] Saved plot: {out}")
+
     # 4) CSR vs Dense ratio vs sparsity (t=1 and t=max threads)
     for N in sorted(df_ok["matrix_size"].unique()):
         subN = df_ok[df_ok["matrix_size"] == N].copy()
@@ -122,7 +185,7 @@ def make_plots(means_csv: str) -> None:
         
 
         ax.set_xlabel("Sparsity")
-        ax.set_ylabel("Dense / CSR  (>1 => CSR faster)")
+        ax.set_ylabel("Dense time / CSR time")
         ax.set_yscale("log", base=10)
         ymax = max(
             serial["ratio_dense_over_csr_serial"].max(),
@@ -143,6 +206,48 @@ def make_plots(means_csv: str) -> None:
         out = os.path.join(PLOTS_DIR, f"csr_vs_dense_ratio_N{N//1000}K.svg")
         fig.savefig(out, format="svg", bbox_inches="tight")
         plt.close(fig)
+
+        print(f"[INFO] Saved plot: {out}")
+    
+    # 4.2) CSR vs Dense ratio vs num_mults (t=4)
+    for N in sorted(df_ok["matrix_size"].unique()):
+        thread_count = 4
+        subN = df_ok[(df_ok["matrix_size"] == N)  & (df_ok["threads"] == thread_count)].copy()
+        reps = sorted(subN["sparsity"].unique(), reverse=True)#[:6]
+        
+        ymax = 0
+        fig, ax = plt.subplots()
+        ax.axhline(1.0, color="black", linestyle="-", alpha=0.6) # baseline
+        for sp in reps:
+            g = subN[subN["sparsity"] == sp].groupby("num_mults")["ratio_dense_over_csr_serial"].mean().reset_index().sort_values("num_mults")
+            ax.plot(g["num_mults"], g["ratio_dense_over_csr_serial"], "o--", label=f"sp={sp:.2f}")
+            ymax = max(ymax, g["ratio_dense_over_csr_serial"].max())
+
+        # <--- Minimal fix: force integer ticks
+        ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+        ax.set_xticks([1, 5, 10, 20])
+        ax.set_xlim(0, 21)
+
+        ax.set_xlabel("Repeated Multiplications")
+        ax.set_ylabel("Dense time / CSR time")
+        ax.set_yscale("log", base=10)
+        ax.set_ylim(top=10 ** np.ceil(np.log10(ymax)))
+
+        # Gridlines
+        ax.grid(True, linestyle="-", alpha=0.6)
+        ax.grid(True, which="major", axis="y", linestyle="-", alpha=0.6)
+        ax.grid(True, which="minor", axis="y", linestyle="--", alpha=0.6)
+        ax.grid(True, which="minor", axis="x", linestyle="--", alpha=0.3)
+        
+        ax.set_title(f"CSR vs Dense ratio vs multiplications (N={N:,}, threads={thread_count})")
+
+        ax.legend(loc="center", bbox_to_anchor=(0.75, 0.6))
+        fig.tight_layout()
+        out = os.path.join(PLOTS_DIR, f"csr_vs_dense_ratio_v_mults_N{N//1000}K.svg")
+        fig.savefig(out, format="svg", bbox_inches="tight")
+        plt.close(fig)
+
+        print(f"[INFO] Saved plot: {out}")
 
     print(f"[INFO] Plots saved in: {PLOTS_DIR}")
 
